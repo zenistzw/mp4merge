@@ -497,7 +497,7 @@ class myFrame(wx.Frame):
         aboutDialog(self, "版本", "名称:MP4视频头部尾部添加器v1.0", "依赖:FFMPEG", "").ShowModal()
 
     def onModalAuthor(self, evt):
-        aboutDialog(self, "作者", "Author:学客教育", "地址:上海长宁区来福士广场T2楼2103", "").ShowModal()
+        aboutDialog(self, "作者", "Author:kevinliu", "地址:上海长宁区来福士广场T2楼2103", "").ShowModal()
 
     def openVideoDir(self, evt):
         # os.system("explorer videos")
