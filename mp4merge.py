@@ -8,13 +8,13 @@ import filetype
 import winreg
 import shutil
 
-
 class workerThread(threading.Thread):
     def __init__(self, threadNum, window, obj):
         """
         :param threadNum: 进程数
         :param window: wxFrame
         :param obj: 得到的目录或者文件路径
+        这个类是视频合成的类，启动一个视频合成的进程，完成用户所选择的目录或者单文件的合成视频
         """
         threading.Thread.__init__(self)
         self.threadNum = threadNum
@@ -36,17 +36,31 @@ class workerThread(threading.Thread):
         self.outputDir = self.outputDir_unicode.encode("gbk")
 
     def getConfigDir(self):
+        """
+        获取配置文件所在的位置，以及视频合成临时目录的位置
+        :return:
+        """
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', )
         self.configDir = winreg.QueryValueEx(key, "Personal")[0]
         self.config = self.configDir + '\\mp4merge\\config.ini'
         self.tmpDir_unicode = self.configDir + '\\mp4merge\\temp'
         self.tmpDir = self.tmpDir_unicode.encode("gbk")
 
-
     def stop(self):
+        """
+        停止进程
+        :return:
+        """
         self.timeToQuit.set()
 
     def run(self):
+        """
+        启动合并视频进程
+        如果传入的参数是文件，就合成单文件
+        如果是目录，那么遍历目录文件，判断文件类型，将文件类型为mp4的文件合成，其他的都跳过
+        如果没有选择，那么提示请选择
+        :return:
+        """
         msg = "test"
         if os.path.isfile(self.obj):
             pathName = self.obj
@@ -87,11 +101,23 @@ class workerThread(threading.Thread):
         wx.CallAfter(self.window.threadFinished, self)
 
     def transCode(self, content):
+        """
+        这是转码的功能，由于中文版windows某些cmd调用必须用gbk
+        先把utf-8转为unicode，在把unicode转为gbk
+        :param content:
+        :return:
+        """
         self.content = content
         self.content_unicode = self.content.decode("utf-8")
         self.content_gbk = self.content_unicode.encode("gbk")
 
     def runCmd(self, cmd):
+        """
+        运行命令的功能
+        在win下运行cmd命令，并把输出以gbk格式打印到面板上，window指定了主程序的功能
+        :param cmd:
+        :return:
+        """
         popenData = subprocess.Popen(self.cmd, shell=True, stdout=subprocess.PIPE)
         for i in range(1, self.messageCount + 1):
             getData = unicode(popenData.stdout.readline(), 'gbk')
@@ -101,6 +127,12 @@ class workerThread(threading.Thread):
             wx.CallAfter(self.window.logMessage, getData)
 
     def transFile(self, pathName, fileName):
+        """
+        这是合成视频的逻辑，现将mp4转为TS视频流，再将视频流合成为mp4
+        :param pathName:生成视频的目录
+        :param fileName:要添加头部和尾部的视频
+        :return:
+        """
         new_file = self.outputDir + '\\' + fileName
         self.cmd = 'echo ----------------------------------------start----------------------------------------'
         self.runCmd(self.cmd)
@@ -122,10 +154,10 @@ class workerThread(threading.Thread):
         self.cmd = 'echo -----------------------------------------end----------------------------------------'
         self.runCmd(self.cmd)
 
-
 class aboutDialog(wx.Dialog):
     def __init__(self, parent, title, txt1, txt2, txt3):
         """
+        这个类主要是写了关于作者，版本的对话框，不多做解释
         :param title: 关于对话框的标题
         :param label: 关于对话框的内容
         """
@@ -148,9 +180,13 @@ class aboutDialog(wx.Dialog):
         aboutMain.Add(self.btn, 0, flag=wx.ALIGN_CENTER | wx.TOP | wx.LEFT | wx.RIGHT, border=20)
         panel.SetSizer(aboutMain)
 
-
 class viewVideo(wx.Dialog):
     def __init__(self, parent, title):
+        """
+        这个类主要实现了查看当前定义的头部和尾部视频的对话框
+        :param parent:
+        :param title:
+        """
         super(viewVideo, self).__init__(parent, title=title, size=(500, 253), style=wx.DEFAULT_DIALOG_STYLE)
         panel = wx.Panel(self)
         self.getConfigDir()
@@ -193,11 +229,20 @@ class viewVideo(wx.Dialog):
         self.setVideoPath(video2, self.tailVideo)
 
     def getConfigDir(self):
+        """
+        获取配置文件位置
+        :return:
+        """
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', )
         self.configDir = winreg.QueryValueEx(key, "Personal")[0]
         self.config = self.configDir + '\\mp4merge\\config.ini'
 
     def openVideo1(self, evt):
+        """
+        打开头部文件
+        :param evt:
+        :return:
+        """
         try:
             os.startfile(self.headVideo)
         except WindowsError:
@@ -206,6 +251,11 @@ class viewVideo(wx.Dialog):
             pass
 
     def openVideo2(self, evt):
+        """
+        打开尾部文件
+        :param evt:
+        :return:
+        """
         try:
             os.startfile(self.tailVideo)
         except WindowsError:
@@ -214,15 +264,31 @@ class viewVideo(wx.Dialog):
             pass
 
     def setVideoPath(self, txt, fileName):
+        """
+        在txt框中显示视频路径
+        :param txt:
+        :param fileName:
+        :return:
+        """
         self.txt = txt
         fileName_gbk = fileName.decode("gbk")
         self.txt.SetValue(fileName_gbk)
 
     def onMsgBox(self, evt):
+        """
+        不存在就提示
+        :param evt:
+        :return:
+        """
         wx.MessageBox("文件不存在，请重新配置！", "提示", wx.OK | wx.ICON_INFORMATION)
 
 class configFile(wx.Dialog):
     def __init__(self, parent, title):
+        """
+        这个类主要是用户自己定义配置文件的对话框
+        :param parent:
+        :param title:
+        """
         super(configFile, self).__init__(parent, title=title, size=(500, 270), style=wx.DEFAULT_DIALOG_STYLE)
         self.video1Path = ''
         self.video2Path = ''
@@ -292,12 +358,25 @@ class configFile(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.confirmConfig, self.confirmBtn)
 
     def getConfigDir(self):
+        """
+        获取配置文件位置，默认视频输出目录位置
+        :return:
+        """
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', )
         self.configDir = winreg.QueryValueEx(key, "Personal")[0]
         self.config = self.configDir + '\\mp4merge\\config.ini'
         self.videoDir = self.configDir + '\\video'
 
     def configNew(self, evt):
+        """
+        这个是对话框应用按钮的方法
+        获取配置文件中的原来的配置
+        获取新的配置
+        判断新的配置是不是为空，如果为空，那么把原来的值付给它
+        把新的配置写到配置文件中
+        :param evt:
+        :return:
+        """
         self.cf.read(self.config)
         self.headVideo = self.cf.get('video', 'head_video')
         self.tailVideo = self.cf.get('video', 'tail_video')
@@ -318,10 +397,25 @@ class configFile(wx.Dialog):
         self.configBtn.Disable()
 
     def confirmConfig(self, evt):
+        """
+        这个是对话框确定按钮的方法
+        调用应用配置，并关闭对话框
+        :param evt:
+        :return:
+        """
         self.configNew(evt)
         self.Close()
 
     def defaultConfig(self, evt):
+        """
+        这个是对话框默认配置按钮的方法
+        先把默认的输出目录，头部和尾部视频写到配置文件
+        再把显示部分的输出目录，头部和尾部视频更改
+        然后把选择事件中的输出目录，头部和尾部视频更改赋值为空值
+        最后一步是为了在点击确定的时候确保是默认配置
+        :param evt:
+        :return:
+        """
         self.cf.set('dir', 'output_dir', self.videoDir)
         self.cf.set('video', 'head_video', '1.ts')
         self.cf.set('video', 'tail_video', '3.ts')
@@ -334,11 +428,22 @@ class configFile(wx.Dialog):
         self.video2Path = ''
 
     def setVideoPath(self, txt, path):
+        """
+        显示txt文本框的显示方法
+        :param txt:
+        :param path:
+        :return:
+        """
         self.txt = txt
         path_gbk = path.decode("gbk")
         self.txt.SetValue(path_gbk)
 
     def openPath(self, evt):
+        """
+        选择输出目录的方法
+        :param evt:
+        :return:
+        """
         dlg = wx.DirDialog(self, "选择目录", style=wx.DD_DEFAULT_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.dirPath = dlg.GetPath()
@@ -349,6 +454,11 @@ class configFile(wx.Dialog):
         self.configBtn.Enable()
 
     def openFile1(self, evt):
+        """
+        选择头部视频的方法
+        :param evt:
+        :return:
+        """
         dlg = wx.FileDialog(
             self,
             "选择文件",
@@ -365,6 +475,11 @@ class configFile(wx.Dialog):
         self.configBtn.Enable()
 
     def openFile2(self, evt):
+        """
+        选择尾部视频的方法
+        :param evt:
+        :return:
+        """
         dlg = wx.FileDialog(
             self,
             "选择文件",
@@ -381,7 +496,13 @@ class configFile(wx.Dialog):
         self.configBtn.Enable()
 
 class myFrame(wx.Frame):
+    """
+    主程序对话框
+    """
     def __init__(self):
+        """
+        主程序界面
+        """
         wx.Frame.__init__(self, None, title="MP4头部尾部添加器v1.0", size=(800, 500))
         self.threads = []
         self.count = 0
@@ -466,6 +587,11 @@ class myFrame(wx.Frame):
         self.SetIcon(self.icon)
 
     def initConfig(self):
+        """
+        初始化配置文件，目录
+        如果配置文件，目录不存在，那么就创建目录，初始化配置文件
+        :return:
+        """
         if os.path.exists(self.tmpDir):
             pass
         else:
@@ -484,6 +610,11 @@ class myFrame(wx.Frame):
             cf.write(open(self.config, "w"))
 
     def getConfigDir(self):
+        """
+        获取默认配置文件，临时目录，默认输出目录位置
+        这个目录位置是根据注册表中的信息来的，是按用户的
+        :return:
+        """
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', )
         self.configDir = winreg.QueryValueEx(key, "Personal")[0]
         self.config = self.configDir + '\\mp4merge\\config.ini'
@@ -491,16 +622,36 @@ class myFrame(wx.Frame):
         self.videoDir = self.configDir + '\\video'
 
     def onQuit(self, evt):
+        """
+        关闭程序
+        :param evt:
+        :return:
+        """
         self.Close()
 
     def onModalVersion(self, evt):
+        """
+        版本信息
+        :param evt:
+        :return:
+        """
         aboutDialog(self, "版本", "名称:MP4视频头部尾部添加器v1.0", "依赖:FFMPEG", "").ShowModal()
 
     def onModalAuthor(self, evt):
-        aboutDialog(self, "作者", "Author:kevinliu", "地址:上海长宁区来福士广场T2楼2103", "").ShowModal()
+        """
+        作者信息
+        :param evt:
+        :return:
+        """
+        aboutDialog(self, "作者", "作者:kevinliu", "地址:上海长宁区来福士广场T2楼2103", "").ShowModal()
 
     def openVideoDir(self, evt):
-        # os.system("explorer videos")
+        """
+        菜单
+        打开输出视频目录
+        :param evt:
+        :return:
+        """
         cf = ConfigParser.ConfigParser()
         cf.read(self.config)
         outputDir_unicode = cf.get('dir', 'output_dir').decode("utf-8")
@@ -508,15 +659,38 @@ class myFrame(wx.Frame):
         subprocess.call(["explorer", outputDir])
 
     def openHeadVideo(self, evt):
+        """
+        菜单
+        头尾详情对话框
+        :param evt:
+        :return:
+        """
         viewVideo(self, "视频头尾详情").ShowModal()
 
     def setting(self, evt):
+        """
+        菜单
+        配置对话框
+        :param evt:
+        :return:
+        """
         configFile(self, "配置").ShowModal()
 
     def onMsgBox(self, evt):
+        """
+        任务完成提示
+        :param evt:
+        :return:
+        """
         wx.MessageBox("任务已完成", "提示", wx.OK | wx.ICON_INFORMATION)
 
     def openFile(self, evt):
+        """
+        菜单
+        打开单文件
+        :param evt:
+        :return:
+        """
         dlg = wx.FileDialog(
             self,
             "打开文件",
@@ -532,6 +706,12 @@ class myFrame(wx.Frame):
         dlg.Destroy()
 
     def openPath(self, evt):
+        """
+        菜单
+        打开目录
+        :param evt:
+        :return:
+        """
         dlg = wx.DirDialog(self, "打开目录", style=wx.DD_DEFAULT_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.filePath = dlg.GetPath()
@@ -541,11 +721,20 @@ class myFrame(wx.Frame):
         dlg.Destroy()
 
     def onStartButton(self, evt):
+        """
+        合成视频按钮
+        :param evt:
+        :return:
+        """
         self.buttonLock()
         self.obj = self.filePath.encode("gbk")
         self.StartFunction()
 
     def StartFunction(self):
+        """
+        开始合成调用的方法
+        :return:
+        """
         self.count += 1
         thread = workerThread(self.count, self, self.obj)
         self.threads.append(thread)
@@ -553,35 +742,71 @@ class myFrame(wx.Frame):
         thread.start()
 
     def onStopButton(self, evt):
+        """
+        停止按钮
+        :param evt:
+        :return:
+        """
         self.stopThreads()
         self.updateCount()
 
     def onCloseWindow(self, evt):
+        """
+        关闭窗口
+        :param evt:
+        :return:
+        """
         self.stopThreads()
         self.updateCount()
         self.Destroy()
 
     def stopThreads(self):
+        """
+        停止进程
+        :return:
+        """
         while self.threads:
             thread = self.threads[0]
             thread.stop()
             self.threads.remove(thread)
 
     def logMessage(self, msg):
+        """
+        信息输出窗口的方法
+        :param msg:
+        :return:
+        """
         self.log.AppendText(msg)
 
     def threadFinished(self, thread):
+        """
+        进程结束时调用的方法
+        :param thread:
+        :return:
+        """
         self.threads.remove(thread)
         self.updateCount()
         self.onMsgBox(self)
 
     def buttonLock(self):
+        """
+        锁住开始合成按钮
+        :return:
+        """
         self.startBtn.Disable()
 
     def buttonUnlock(self):
+        """
+        解锁按钮
+        :return:
+        """
         self.startBtn.Enable()
 
     def updateCount(self):
+        """
+        更新任务计数，解锁开始合成按钮
+        :return:
+        """
         self.tc.SetLabel("任务进程: %d" % len(self.threads))
         if len(self.threads) == 0:
             self.buttonUnlock()
