@@ -637,7 +637,7 @@ class myFrame(wx.Frame):
         """
         主程序界面
         """
-        wx.Frame.__init__(self, None, title="MP4头部尾部添加器v1.0", size=(800, 500))
+        wx.Frame.__init__(self, None, title="MP4 Merge", size=(800, 500))
         self.threads = []
         self.count = 0
         self.filePath = ''
