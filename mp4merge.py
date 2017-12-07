@@ -7,6 +7,7 @@ import subprocess
 import filetype
 import winreg
 import shutil
+import commands
 
 class workerThread(threading.Thread):
     def __init__(self, threadNum, window, obj):
@@ -282,6 +283,142 @@ class viewVideo(wx.Dialog):
         """
         wx.MessageBox("文件不存在，请重新配置！", "提示", wx.OK | wx.ICON_INFORMATION)
 
+class createTsVideo(wx.Dialog):
+    def __init__(self, parent, title):
+        """
+        这个类主要是用户生成头部和尾部文件的对话框
+        :param parent:
+        :param title:
+        """
+        super(createTsVideo, self).__init__(parent, title=title, size=(500, 170), style=wx.DEFAULT_DIALOG_STYLE)
+        panel = wx.Panel(self)
+        self.getConfigDir()
+        self.cf = ConfigParser.ConfigParser()
+        self.cf.read(self.config)
+        self.outputDir_unicode = self.cf.get('dir', 'output_dir').decode("utf-8")
+        self.outputDir = self.outputDir_unicode.encode("gbk")
+
+        self.videoPathText = wx.TextCtrl(panel, style=wx.TE_READONLY)
+        self.selectVideoBtn = wx.Button(panel, label="选择")
+        myText = wx.StaticBox(panel, 0, label="生成头部尾部视频")
+        self.openVideoPathBtn = wx.Button(panel, label="查看生成视频")
+        self.createVideoBtn = wx.Button(panel, label="生成TS视频")
+        self.returnMainPanelBtn = wx.Button(panel, wx.ID_OK, label="返回")
+
+        myTextSizer = wx.StaticBoxSizer(myText, wx.VERTICAL)
+        textInner = wx.BoxSizer(wx.HORIZONTAL)
+        btnInner = wx.BoxSizer(wx.HORIZONTAL)
+        textInner.Add(self.videoPathText, 1, flag=wx.ALL | wx.EXPAND, border=5)
+        textInner.Add(self.selectVideoBtn, 0, flag=wx.ALL, border=5)
+        btnInner.Add(self.openVideoPathBtn, 0, flag=wx.ALL, border=5)
+        btnInner.Add(self.createVideoBtn, 0, flag=wx.ALL, border=5)
+        btnInner.Add(self.returnMainPanelBtn, 0, flag=wx.ALL, border=5)
+        myTextSizer.Add(textInner, 0, flag=wx.ALL | wx.EXPAND, border=5)
+        createTsVideoMain = wx.BoxSizer(wx.VERTICAL)
+        createTsVideoMain.Add(myTextSizer, 0, flag=wx.ALL | wx.EXPAND, border=5)
+        createTsVideoMain.Add(btnInner, 0, flag=wx.ALIGN_RIGHT | wx.ALL, border=5)
+        panel.SetSizer(createTsVideoMain)
+
+        self.createVideoBtn.Disable()
+        self.openVideoPathBtn.Disable()
+
+        self.Bind(wx.EVT_BUTTON, self.openFile, self.selectVideoBtn)
+        self.Bind(wx.EVT_BUTTON, self.createVideo, self.createVideoBtn)
+        self.Bind(wx.EVT_BUTTON, self.openVideoDir, self.openVideoPathBtn)
+
+    def getConfigDir(self):
+        """
+        获取配置文件位置，默认视频输出目录位置
+        :return:
+        """
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders', )
+        self.configDir = winreg.QueryValueEx(key, "Personal")[0]
+        self.config = self.configDir + '\\mp4merge\\config.ini'
+
+    def openVideoDir(self, evt):
+        """
+        菜单
+        打开输出视频目录
+        :param evt:
+        :return:
+        """
+        cf = ConfigParser.ConfigParser()
+        cf.read(self.config)
+        outPutDir_unicode = cf.get('dir', 'output_dir').decode("utf-8")
+        outPutDir = outPutDir_unicode.encode("gbk")
+        pathName = self.videoPath.encode("gbk")
+        fileName = os.path.basename(pathName)[:-4] + '.ts'
+        outPutVideo = outPutDir + '\\' + fileName
+        os.popen("explorer /select,"+ outPutVideo)
+
+    def openFile(self,evt):
+        """
+        选择文件对话框
+        :param evt:
+        :return:
+        """
+        dlg = wx.FileDialog(self, "选择文件", "", "", "MP4 files (*.mp4)|*.mp4", wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.videoPath = dlg.GetPath()
+        else:
+            return
+        self.videoPathText.SetValue(self.videoPath)
+        dlg.Destroy()
+        self.createVideoBtn.Enable()
+        self.openVideoPathBtn.Disable()
+
+    def runCmd(self, cmd):
+        """
+        运行命令的功能
+        在win下运行cmd命令，并把输出以gbk格式打印到面板上，window指定了主程序的功能
+        :param cmd:
+        :return:
+        """
+        process = subprocess.Popen(self.cmd, shell=True)
+        process.wait()
+
+    def convertVideo(self, pathName, fileName):
+        """
+        生成ts文件的命令
+        :param pathName: 文件详细地址
+        :param fileName: 文件名（不含后缀）
+        :return:
+        """
+        new_file = self.outputDir + '\\' + fileName + '.ts'
+        self.cmd = 'ffmpeg -i ' + pathName + ' -y -vcodec copy -acodec copy -vbsf h264_mp4toannexb ' + new_file
+        self.runCmd(self.cmd)
+        if os.path.isfile(new_file):
+            self.onMsgBox1()
+            self.openVideoPathBtn.Enable()
+        else:
+            self.onMsgBox2()
+
+    def createVideo(self,evt):
+        """
+        生成ts格式文件
+        :param evt:
+        :return:
+        """
+        pathName = self.videoPath.encode("gbk")
+        fileName = os.path.basename(pathName)[:-4]
+        self.convertVideo(pathName, fileName)
+
+    def onMsgBox1(self):
+        """
+        任务完成提示
+        :param evt:
+        :return:
+        """
+        wx.MessageBox("任务已完成", "提示", wx.OK | wx.ICON_INFORMATION)
+
+    def onMsgBox2(self):
+        """
+        任务完成提示
+        :param evt:
+        :return:
+        """
+        wx.MessageBox("任务失败", "提示", wx.OK | wx.ICON_ERROR)
+
 class configFile(wx.Dialog):
     def __init__(self, parent, title):
         """
@@ -321,7 +458,7 @@ class configFile(wx.Dialog):
         videoInner2 = wx.BoxSizer(wx.HORIZONTAL)
         dirInner = wx.BoxSizer(wx.HORIZONTAL)
         btnInner = wx.BoxSizer(wx.HORIZONTAL)
-        text1 = wx.StaticBox(panel, -1, label="配置选项")
+        text1 = wx.StaticBox(panel, 0, label="配置选项")
         textSizer = wx.StaticBoxSizer(text1, wx.VERTICAL)
         videoInner1.Add(headText, 0, flag=wx.ALL, border=10)
         videoInner1.Add(self.video1, 1, flag=wx.ALL | wx.EXPAND, border=5)
@@ -496,9 +633,6 @@ class configFile(wx.Dialog):
         self.configBtn.Enable()
 
 class myFrame(wx.Frame):
-    """
-    主程序对话框
-    """
     def __init__(self):
         """
         主程序界面
@@ -518,6 +652,7 @@ class myFrame(wx.Frame):
         appVideoDir = 6
         appConfig = 7
         appCat = 8
+        appCreate = 9
         # 文件菜单
         menuBar = wx.MenuBar()
         fileMenu = wx.Menu()
@@ -538,9 +673,12 @@ class myFrame(wx.Frame):
         optionMenu = wx.Menu()
         catVideo = wx.MenuItem(optionMenu, appCat, "&视频头尾详情\tCtrl+I")
         catVideo.SetBitmap(wx.Bitmap("static/info.ico"))
+        createVideo = wx.MenuItem(optionMenu, appCreate, "&生成头尾工具")
+        createVideo.SetBitmap(wx.Bitmap("static/wrench.ico"))
         configVideo = wx.MenuItem(optionMenu, appConfig, "&配置\tCtrl+Alt+S")
         configVideo.SetBitmap(wx.Bitmap("static/config.ico"))
         optionMenu.Append(catVideo)
+        optionMenu.Append(createVideo)
         optionMenu.Append(configVideo)
         menuBar.Append(optionMenu, "&选项")
         # 关于菜单
@@ -562,6 +700,7 @@ class myFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onModalAuthor, id=appAuthor)
         self.Bind(wx.EVT_MENU, self.openHeadVideo, id=appCat)
         self.Bind(wx.EVT_MENU, self.setting, id=appConfig)
+        self.Bind(wx.EVT_MENU, self.createVideo, id=appCreate)
         # 窗口控件
         panel = wx.Panel(self)
         self.icon = wx.Icon('static/main.ico', wx.BITMAP_TYPE_ICO)
@@ -675,6 +814,15 @@ class myFrame(wx.Frame):
         :return:
         """
         configFile(self, "配置").ShowModal()
+
+    def createVideo(self, evt):
+        """
+        菜单
+        配置对话框
+        :param evt:
+        :return:
+        """
+        createTsVideo(self, "生成头尾视频").ShowModal()
 
     def onMsgBox(self, evt):
         """
