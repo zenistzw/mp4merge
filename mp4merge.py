@@ -126,6 +126,7 @@ class workerThread(threading.Thread):
             if self.timeToQuit.isSet():
                 break
             wx.CallAfter(self.window.logMessage, getData)
+        popenData.wait()
 
     def transFile(self, pathName, fileName):
         """
@@ -134,23 +135,28 @@ class workerThread(threading.Thread):
         :param fileName:要添加头部和尾部的视频
         :return:
         """
-        new_file = self.outputDir + '\\' + fileName
+        realpath = '"' + pathName + '"'
+        new_file = '"' + self.outputDir + '\\' + fileName + '"'
+        check_file = self.outputDir + '\\' + fileName
         self.cmd = 'echo ----------------------------------------start----------------------------------------'
         self.runCmd(self.cmd)
         self.transCode("开始合成")
         self.cmd = 'echo ' + self.content_gbk + fileName
         self.runCmd(self.cmd)
-        self.cmd = 'ffmpeg -i ' + pathName + ' -y -vcodec copy -acodec copy -vbsf h264_mp4toannexb ' + self.tmpDir + '\\tmp.ts'
+        self.cmd = 'ffmpeg -i ' + realpath + ' -y -vcodec copy -acodec copy -vbsf h264_mp4toannexb ' + \
+                   self.tmpDir + '\\tmp.ts'
         self.runCmd(self.cmd)
-        self.cmd = 'ffmpeg -i "concat:' + self.headVideo + '|' + self.tmpDir + '\\tmp.ts' + '|' + self.tailVideo + '" -y -acodec copy -vcodec copy -absf aac_adtstoasc ' + new_file
+        self.cmd = 'ffmpeg -i "concat:' + self.headVideo + '|' + self.tmpDir + '\\tmp.ts' + '|' + self.tailVideo + \
+                   '" -y -acodec copy -vcodec copy -absf aac_adtstoasc ' + new_file
         self.runCmd(self.cmd)
-        if os.path.isfile(new_file):
+
+        if os.path.isfile(check_file):
             self.transCode("合成成功！")
             self.cmd = 'echo ' + fileName + self.content_gbk
             self.runCmd(self.cmd)
         else:
             self.transCode("合成失败！")
-            self.cmd = 'echo merge' + fileName + self.content_gbk
+            self.cmd = 'echo ' + fileName + self.content_gbk
             self.runCmd(self.cmd)
         self.cmd = 'echo -----------------------------------------end----------------------------------------'
         self.runCmd(self.cmd)
@@ -384,10 +390,12 @@ class createTsVideo(wx.Dialog):
         :param fileName: 文件名（不含后缀）
         :return:
         """
-        new_file = self.outputDir + '\\' + fileName + '.ts'
-        self.cmd = 'ffmpeg -i ' + pathName + ' -y -vcodec copy -acodec copy -vbsf h264_mp4toannexb ' + new_file
+        realpath = '"' + pathName + '"'
+        new_file = '"' + self.outputDir + '\\' + fileName + '.ts"'
+        check_file = self.outputDir + '\\' + fileName + '.ts'
+        self.cmd = 'ffmpeg -i ' + realpath + ' -y -vcodec copy -acodec copy -vbsf h264_mp4toannexb ' + new_file
         self.runCmd(self.cmd)
-        if os.path.isfile(new_file):
+        if os.path.isfile(check_file):
             self.onMsgBox1()
             self.openVideoPathBtn.Enable()
         else:
