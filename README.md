@@ -1,11 +1,11 @@
 <div align="center">
-<a href="http://www.tianzel.cn"><img src="http://www.tianzel.cn/wp-content/uploads/2017/11/8c025e4bb65a0e77ff02722eeb67e4e0-e1511170058957.jpg"/></a>
+<a href="http://www.tianzel.cn/archives/139"><img src="http://www.tianzel.cn/wp-content/uploads/2017/11/8c025e4bb65a0e77ff02722eeb67e4e0-e1511170058957.jpg"/></a>
 </div>
 
 <h2>mp4merge</h2>
 
-<a><img src="https://img.shields.io/badge/platform-windows-green.svg"/></a> 
-<a><img src="https://img.shields.io/badge/doc-latest-green.svg"></a>
+<a href="http://www.tianzel.cn/archives/139"><img src="https://img.shields.io/badge/platform-windows-green.svg"/></a> 
+<a href="http://www.tianzel.cn/archives/139"><img src="https://img.shields.io/badge/doc-latest-green.svg"></a>
 
 <hr/>
 
@@ -18,6 +18,8 @@
 - 软件在windows下开发，目前只能在windows下使用，考虑到使用习惯，不准备移植到其他系统
 
 - 软件依赖FFMPEG，在此感谢FFMPEG
+
+- 目前发现不能转换名字带空格的文件（bug）
 
 ## 安装
 
@@ -37,4 +39,4 @@
 以下是合并单个视频，选择目录可以合并目录下所有MP4视频（不包含二级以上目录）。也可以在选项->设置里面自己定义开头的视频和结尾的视频以及输出目录。
 目前头尾视频只支持ts格式 ~~，暂时没有写生成头部和尾部ts文件的功能~~。
 现在可以在选项->生成头尾工具里面生成视频。
-<a href="http://www.tianzel.cn"><img src="http://www.tianzel.cn/wp-content/uploads/2017/12/201712051914.gif"/></a>
+<a href="http://www.tianzel.cn/archives/139"><img src="http://www.tianzel.cn/wp-content/uploads/2017/12/201712051914.gif"/></a>
